@@ -20,12 +20,15 @@ final class CollectionViewExampleViewController: UIViewController {
     var collectionView: UICollectionView!
 
     var animator: UIViewPropertyAnimator?
-    var transitionTopConstraint: NSLayoutConstraint!
-    var transitionHeightConstraint: NSLayoutConstraint!
+    var headerTopConstraint: NSLayoutConstraint!
+    var headerHeightConstraint: NSLayoutConstraint!
     var overlayBottomConstraint: NSLayoutConstraint!
     var overlayHeightConstraint: NSLayoutConstraint!
 
-    private(set) lazy var overlayOffset: CGPoint = .zero
+    private(set) lazy var scrollView: UIScrollView = collectionView
+    private(set) lazy var transitioningHeaderView: StretchyHeaderViewToNavigationBarTransitionCapable = stretchyHeaderView
+    private(set) lazy var transitioningOverlayView: OverlayViewTransitionCapable = overlayHeaderView
+    private(set) lazy var transitioningOverlayViewOffset: CGPoint = .zero
 
     private(set) lazy var stretchyHeaderView: StretchyHeaderViewToNavigationBarTransitionView = {
         let view = StretchyHeaderViewToNavigationBarTransitionView(navigationUnderlayHeight: navigationControllerHeight)
@@ -73,18 +76,6 @@ final class CollectionViewExampleViewController: UIViewController {
 extension CollectionViewExampleViewController: UICollectionViewDelegate {}
 
 extension CollectionViewExampleViewController: StretchyHeaderViewToNavigationBarTransitioning {
-
-    var scrollView: UIScrollView {
-        return collectionView
-    }
-
-    var transitionView: StretchyHeaderViewToNavigationBarTransitionCapable {
-        return stretchyHeaderView
-    }
-
-    var overlayView: OverlayViewTransitionCapable {
-        return overlayHeaderView
-    }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         scrollViewDidPerformTransition()

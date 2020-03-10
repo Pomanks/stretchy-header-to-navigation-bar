@@ -22,8 +22,6 @@ extension CollectionViewExampleViewController {
         collectionView.register(TextCell.self, forCellWithReuseIdentifier: TextCell.reuseIdentifier)
 
         view.addSubview(collectionView)
-
-        configureScrollViewHierarchy()
     }
 
     func configureDataSource() {

@@ -11,15 +11,15 @@ import UIKit
 protocol StretchyHeaderViewToNavigationBarTransitioning: UIViewController, UIScrollViewDelegate {
 
     var animator: UIViewPropertyAnimator? { get set }
-    var transitionTopConstraint: NSLayoutConstraint! { get set }
-    var transitionHeightConstraint: NSLayoutConstraint! { get set }
+    var headerTopConstraint: NSLayoutConstraint! { get set }
+    var headerHeightConstraint: NSLayoutConstraint! { get set }
     var overlayBottomConstraint: NSLayoutConstraint! { get set }
     var overlayHeightConstraint: NSLayoutConstraint! { get set }
 
-    var overlayOffset: CGPoint { get } /// How much it will be offset from `transitionView`'s bottom, if any.
     var scrollView: UIScrollView { get }
-    var transitionView: StretchyHeaderViewToNavigationBarTransitionCapable { get }
-    var overlayView: OverlayViewTransitionCapable { get }
+    var transitioningHeaderView: StretchyHeaderViewToNavigationBarTransitionCapable { get }
+    var transitioningOverlayView: OverlayViewTransitionCapable { get }
+    var transitioningOverlayViewOffset: CGPoint { get } /// How much it will be offset from `transitioningHeaderView`'s bottom, if any.
 
     func configureScrollViewHierarchy()
     func scrollViewWillLayoutSubviews()
@@ -40,27 +40,27 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
         scrollView.contentInsetAdjustmentBehavior = .never
         scrollView.preservesSuperviewLayoutMargins = true
 
-        transitionView.layer.zPosition = -1
+        transitioningHeaderView.layer.zPosition = -1
 
-        scrollView.addSubview(transitionView)
-        scrollView.addSubview(overlayView)
+        scrollView.addSubview(transitioningHeaderView)
+        scrollView.addSubview(transitioningOverlayView)
 
         animator = UIViewPropertyAnimator()
         animator?.startAnimation()
         animator?.pauseAnimation()
 
         // Constants are set later…
-        transitionTopConstraint = transitionView.topAnchor.constraint(equalTo: scrollView.topAnchor)
-        overlayBottomConstraint = overlayView.bottomAnchor.constraint(equalTo: scrollView.topAnchor)
+        headerTopConstraint = transitioningHeaderView.topAnchor.constraint(equalTo: scrollView.topAnchor)
+        overlayBottomConstraint = transitioningOverlayView.bottomAnchor.constraint(equalTo: scrollView.topAnchor)
 
         NSLayoutConstraint.activate([
-            transitionTopConstraint,
+            headerTopConstraint,
 
-            transitionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            transitionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            transitioningHeaderView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            transitioningHeaderView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
-            overlayView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            overlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            transitioningOverlayView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            transitioningOverlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
             overlayBottomConstraint
         ])
@@ -73,22 +73,22 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
      This method should be called inside `viewWillLayoutSubviews()`.
      */
     func scrollViewWillLayoutSubviews() {
-        guard transitionHeightConstraint == nil, overlayHeightConstraint == nil else {
+        guard headerHeightConstraint == nil, overlayHeightConstraint == nil else {
             return
         }
         let effectiveHeight = headerHeight
 
-        transitionHeightConstraint = transitionView.heightAnchor.constraint(equalToConstant: effectiveHeight)
-        transitionHeightConstraint.priority = .init(rawValue: 999)
+        headerHeightConstraint = transitioningHeaderView.heightAnchor.constraint(equalToConstant: effectiveHeight)
+        headerHeightConstraint.priority = .init(rawValue: 999)
 
-        overlayHeightConstraint = overlayView.heightAnchor.constraint(equalToConstant: effectiveHeight)
+        overlayHeightConstraint = transitioningOverlayView.heightAnchor.constraint(equalToConstant: effectiveHeight)
 
         NSLayoutConstraint.activate([
-            transitionHeightConstraint,
+            headerHeightConstraint,
             overlayHeightConstraint
         ])
-        updateHeaderViews()
         updateScrollView()
+        updateTransitioningViews()
     }
 
     /**
@@ -103,9 +103,9 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
      */
     func scrollViewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         coordinator.animate(alongsideTransition: { [weak self] _ in
-            self?.updateTransitionView(with: size)
-            self?.updateOverlayHeaderView(with: size)
             self?.updateScrollView()
+            self?.updateHeaderConstraints(with: size)
+            self?.updateOverlayHeightConstraint(with: size)
         })
     }
 
@@ -114,12 +114,11 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
 
      This method should be called inside `scrollViewDidScroll(_:)`.
      */
-
     func scrollViewDidPerformTransition() {
         let currentHeight = headerHeight
 
         updateNavigationBarAppearance()
-        updateHeaderViews()
+        updateTransitioningViews()
 
         performFirstTransition(after: .twoThirds(of: currentHeight))
         performSecondTransition(after: .oneThird(of: currentHeight))
@@ -131,11 +130,11 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
 private extension StretchyHeaderViewToNavigationBarTransitioning {
 
     var headerHeight: CGFloat {
-        return view.bounds.width * transitionView.multiplier
+        return view.bounds.width * transitioningHeaderView.multiplier
     }
 
     var heightConstant: CGFloat {
-        return transitionHeightConstraint.constant
+        return headerHeightConstraint.constant
     }
 
     var contentOffset: CGPoint {
@@ -164,39 +163,40 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
     }
 
     func updateScrollView() {
-        let newConstant = heightConstant + overlayOffset.y
+        let newConstant = heightConstant + transitioningOverlayViewOffset.y
+        let newContentOffset = CGPoint(x: .zero, y: -newConstant)
 
+        scrollView.setContentOffset(newContentOffset, animated: false)
         scrollView.contentInset.top = newConstant
-        scrollView.contentOffset = CGPoint(x: .zero, y: -newConstant)
         scrollView.verticalScrollIndicatorInsets.top = newConstant - scrollView.safeAreaInsets.top
     }
 
-    func updateHeaderViews() {
-        updateTransitionView()
-        updateOverlayHeaderView()
+    func updateTransitioningViews() {
+        updateHeaderConstraints()
+        updateOverlayHeightConstraint()
     }
 
-    func updateTransitionView(with size: CGSize? = nil) {
+    func updateHeaderConstraints(with size: CGSize? = nil) {
         let currentHeight = headerHeight
-        let newConstant = size == nil ? contentOffset.y : size!.width * transitionView.multiplier
-        let overlayVerticalOffset = overlayOffset.y
+        let newConstant = size == nil ? contentOffset.y : size!.width * transitioningHeaderView.multiplier
+        let overlayVerticalOffset = transitioningOverlayViewOffset.y
         let relativeVerticalOffset = currentHeight + newConstant + overlayVerticalOffset
 
-        if relativeVerticalOffset <= .zero {
-            let newHeight = -newConstant - overlayVerticalOffset
-
-            transitionTopConstraint.constant = newConstant
-            transitionHeightConstraint.constant = newHeight
-        } else {
+        if -relativeVerticalOffset < .zero {
             let additionalOffset = (relativeVerticalOffset / currentHeight) * 65
 
-            transitionTopConstraint.constant = newConstant - additionalOffset
+            headerTopConstraint.constant = newConstant - additionalOffset
+        } else {
+            let newHeight = -newConstant - overlayVerticalOffset
+
+            headerTopConstraint.constant = newConstant
+            headerHeightConstraint.constant = newHeight
         }
     }
 
-    func updateOverlayHeaderView(with size: CGSize? = nil) {
+    func updateOverlayHeightConstraint(with size: CGSize? = nil) {
         if let size = size {
-            let newConstant = size.width * transitionView.multiplier
+            let newConstant = size.width * transitioningHeaderView.multiplier
 
             overlayHeightConstraint.constant = newConstant
         }
@@ -207,7 +207,7 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
     func performFirstTransition(after threshold: CGFloat) {
         let alpha: CGFloat = 1 - calculateAlpha(for: threshold)
 
-        transitionView.navigationUnderlayGradientView.alpha = alpha
+        transitioningHeaderView.navigationUnderlayGradientView.alpha = alpha
 
 //                overlayHeaderView.alpha = alpha
     }
@@ -224,10 +224,10 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
         let alpha: CGFloat = calculateAlpha(for: threshold)
         let reversedAlpha = 1 - alpha
 
-        transitionView.imageView.alpha = reversedAlpha
-        transitionView.visualEffectView.alpha = alpha
+        transitioningHeaderView.imageView.alpha = reversedAlpha
+        transitioningHeaderView.visualEffectView.alpha = alpha
 
-        overlayView.alpha = reversedAlpha
+        transitioningOverlayView.alpha = reversedAlpha
 
         updateStatusBarStyle(with: alpha)
         updateNavigationBarTintColorAlpha(with: alpha)

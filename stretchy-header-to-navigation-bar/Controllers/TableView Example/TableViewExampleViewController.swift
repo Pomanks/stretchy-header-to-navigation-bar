@@ -13,12 +13,12 @@ final class TableViewExampleViewController: UIViewController {
     // MARK: - Members
 
     var animator: UIViewPropertyAnimator?
-    var transitionTopConstraint: NSLayoutConstraint!
-    var transitionHeightConstraint: NSLayoutConstraint!
+    var headerTopConstraint: NSLayoutConstraint!
+    var headerHeightConstraint: NSLayoutConstraint!
     var overlayBottomConstraint: NSLayoutConstraint!
     var overlayHeightConstraint: NSLayoutConstraint!
 
-    private(set) lazy var overlayOffset: CGPoint = .zero
+    private(set) lazy var transitioningOverlayViewOffset: CGPoint = .zero
 
     private(set) lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero)
@@ -116,11 +116,11 @@ extension TableViewExampleViewController: StretchyHeaderViewToNavigationBarTrans
         return tableView
     }
 
-    var transitionView: StretchyHeaderViewToNavigationBarTransitionCapable {
+    var transitioningHeaderView: StretchyHeaderViewToNavigationBarTransitionCapable {
         return stretchyHeaderView
     }
 
-    var overlayView: OverlayViewTransitionCapable {
+    var transitioningOverlayView: OverlayViewTransitionCapable {
         return overlayHeaderView
     }
 
