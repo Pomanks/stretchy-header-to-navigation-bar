@@ -1,2 +1,3 @@
-# stretchy-header-to-navigation-bar
-A reproduction of the header view transition occurring in both Music/TV apps on iOS/iPad OS
+# Stretchy HeadeView to NavigationBar
+
+This project mimics the transition occurring in both Music/TV app on iOS or iPad OS where the stretchy `headerView` transitions into the `navigationBar` and vice versa.
