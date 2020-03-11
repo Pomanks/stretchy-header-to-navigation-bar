@@ -15,4 +15,6 @@ protocol StretchyHeaderViewToNavigationBarTransitionCapable: UIView {
     var navigationUnderlayGradientView: GradientView { get }
     var imageView: UIImageView { get }
     var visualEffectView: UIVisualEffectView { get }
+
+    func updateImage()
 }

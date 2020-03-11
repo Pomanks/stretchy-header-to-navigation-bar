@@ -14,11 +14,22 @@ class StretchyHeaderViewToNavigationBarTransitionView: UIView, StretchyHeaderVie
 
     var navigationUnderlayHeight: CGFloat
 
-    var heightRatio: CGFloat {
-        return 2 / 3
+    var placeholderImage: UIImage? {
+        switch (traitCollection.horizontalSizeClass, traitCollection.verticalSizeClass) {
+        case (.compact, .regular):
+            return UIImage(named: "background-portrait")
+
+        default:
+            return UIImage(named: "background-landscape")
+        }
     }
 
-    private(set) lazy var multiplier: CGFloat = { 1 / heightRatio }()
+    var multiplier: CGFloat {
+        let width = placeholderImage?.size.width ?? 1
+        let height = placeholderImage?.size.height ?? 1
+
+        return 1 / (width / height)
+    }
 
     private(set) lazy var navigationUnderlayGradientView: GradientView = {
         let view = GradientView()
@@ -30,8 +41,7 @@ class StretchyHeaderViewToNavigationBarTransitionView: UIView, StretchyHeaderVie
     }()
 
     private(set) lazy var imageView: UIImageView = {
-        let image = UIImage(named: "background")
-        let imageView = UIImageView(image: image)
+        let imageView = UIImageView(image: placeholderImage)
 
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill // This is required for the stretchy effect
@@ -69,6 +79,16 @@ class StretchyHeaderViewToNavigationBarTransitionView: UIView, StretchyHeaderVie
     }
 
     // MARK: - Lifecycle
+
+    func updateImage() {
+        imageView.image = placeholderImage
+    }
+
+//    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+//        super.traitCollectionDidChange(previousTraitCollection)
+//
+//        imageView.image = placeholderImage
+//    }
 }
 
 // MARK: - Helpers
@@ -94,11 +114,6 @@ private extension StretchyHeaderViewToNavigationBarTransitionView {
             navigationUnderlayGradientView.leadingAnchor.constraint(equalTo: leadingAnchor),
             navigationUnderlayGradientView.trailingAnchor.constraint(equalTo: trailingAnchor),
             navigationUnderlayGradientView.heightAnchor.constraint(equalToConstant: navigationUnderlayHeight),
-
-//            overlayView.topAnchor.constraint(equalTo: topAnchor),
-//            overlayView.leadingAnchor.constraint(equalTo: leadingAnchor),
-//            overlayView.trailingAnchor.constraint(equalTo: trailingAnchor),
-//            overlayView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             visualEffectView.topAnchor.constraint(equalTo: topAnchor),
             visualEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),

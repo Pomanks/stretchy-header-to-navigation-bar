@@ -58,30 +58,39 @@ extension CollectionViewExampleViewController {
     }
 
     func makeCompositionalLayout() -> UICollectionViewCompositionalLayout {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(0.2),
-            heightDimension: .fractionalHeight(1.0)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-        item.contentInsets = NSDirectionalEdgeInsets(top: 5, leading: 5, bottom: 5, trailing: 5)
-
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .fractionalWidth(0.2)
-        )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-        let section = NSCollectionLayoutSection(group: group)
-
-        section.decorationItems = [.background(elementKind: SectionBackgroundDecorationView.elementKind)]
-
-        let layout = UICollectionViewCompositionalLayout(section: section)
+        let layout = UICollectionViewCompositionalLayout(sectionProvider: sectionProvider())
 
         layout.register(
             SectionBackgroundDecorationView.self,
             forDecorationViewOfKind: SectionBackgroundDecorationView.elementKind
         )
         return layout
+    }
+
+    func sectionProvider() -> UICollectionViewCompositionalLayoutSectionProvider {
+        return { _, layoutEnvironment in
+            let itemSize = NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .fractionalHeight(1.0)
+            )
+            let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+            item.contentInsets = NSDirectionalEdgeInsets(top: 5, leading: 5, bottom: 5, trailing: 5)
+
+            let numberOfItems = self.maximumNumberOfItems(for: layoutEnvironment, matching: 100)
+            let ratio = layoutEnvironment.container.effectiveContentSize.width / CGFloat(numberOfItems)
+
+            let groupSize = NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .absolute(ratio)
+            )
+            let group: NSCollectionLayoutGroup = .horizontal(layoutSize: groupSize, subitem: item, count: numberOfItems)
+            let section = NSCollectionLayoutSection(group: group)
+
+            section.decorationItems = [.background(elementKind: SectionBackgroundDecorationView.elementKind)]
+
+            return section
+        }
     }
 
     func supplementaryViewProvider() -> UICollectionViewDiffableDataSource<Section, Int>.SupplementaryViewProvider? {
@@ -98,5 +107,17 @@ extension CollectionViewExampleViewController {
                 return nil
             }
         }
+    }
+}
+
+// MARK: - Helpers
+
+private extension CollectionViewExampleViewController {
+
+    func maximumNumberOfItems(for layoutEnvironment: NSCollectionLayoutEnvironment, matching minWidth: CGFloat) -> Int {
+        let width = layoutEnvironment.container.effectiveContentSize.width
+        let maxNumberOfItems = (width / minWidth).rounded(.toNearestOrEven)
+
+        return Int(maxNumberOfItems)
     }
 }

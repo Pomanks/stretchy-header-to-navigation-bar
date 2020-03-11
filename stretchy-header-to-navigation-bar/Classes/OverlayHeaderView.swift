@@ -50,8 +50,6 @@ final class OverlayHeaderView: UIView, OverlayViewTransitionCapable {
 private extension OverlayHeaderView {
 
     func configureHierarchy() {
-        let insets: CGFloat = 5
-
         insetsLayoutMarginsFromSafeArea = false
         overrideUserInterfaceStyle = .dark
         preservesSuperviewLayoutMargins = true

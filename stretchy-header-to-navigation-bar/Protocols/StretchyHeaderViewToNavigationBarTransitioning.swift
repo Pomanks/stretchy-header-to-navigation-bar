@@ -103,9 +103,9 @@ extension StretchyHeaderViewToNavigationBarTransitioning {
      */
     func scrollViewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         coordinator.animate(alongsideTransition: { [weak self] _ in
-            self?.updateScrollView()
-            self?.updateHeaderConstraints(with: size)
-            self?.updateOverlayHeightConstraint(with: size)
+            self?.transitioningHeaderView.updateImage()
+            self?.updateScrollView(for: size)
+            self?.updateTransitioningViews(with: size)
         })
     }
 
@@ -162,42 +162,41 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
         navigationItem.scrollEdgeAppearance = navigationBarAppearance
     }
 
-    func updateScrollView() {
-        let newConstant = heightConstant + transitioningOverlayViewOffset.y
-        let newContentOffset = CGPoint(x: .zero, y: -newConstant)
+    func updateScrollView(for size: CGSize? = nil) {
+        let newHeight = calculateHeight(from: size) ?? heightConstant
+        let newConstant = newHeight + transitioningOverlayViewOffset.y
+        let newContentOffset = CGPoint(x: .zero, y: -newHeight)
 
-        scrollView.setContentOffset(newContentOffset, animated: false)
         scrollView.contentInset.top = newConstant
         scrollView.verticalScrollIndicatorInsets.top = newConstant - scrollView.safeAreaInsets.top
+        scrollView.setContentOffset(newContentOffset, animated: true)
     }
 
-    func updateTransitioningViews() {
-        updateHeaderConstraints()
-        updateOverlayHeightConstraint()
+    func updateTransitioningViews(with size: CGSize? = nil) {
+        updateHeaderConstraints(with: size)
+        updateOverlayHeightConstraint(with: size)
     }
 
     func updateHeaderConstraints(with size: CGSize? = nil) {
         let currentHeight = headerHeight
-        let newConstant = size == nil ? contentOffset.y : size!.width * transitioningHeaderView.multiplier
+        let newConstant = calculateHeight(from: size) ?? -contentOffset.y
         let overlayVerticalOffset = transitioningOverlayViewOffset.y
-        let relativeVerticalOffset = currentHeight + newConstant + overlayVerticalOffset
+        let relativeVerticalOffset = currentHeight - newConstant + overlayVerticalOffset
 
         if -relativeVerticalOffset < .zero {
             let additionalOffset = (relativeVerticalOffset / currentHeight) * 65
 
-            headerTopConstraint.constant = newConstant - additionalOffset
+            headerTopConstraint.constant = -newConstant - additionalOffset
         } else {
-            let newHeight = -newConstant - overlayVerticalOffset
+            let newHeight = newConstant + overlayVerticalOffset
 
-            headerTopConstraint.constant = newConstant
+            headerTopConstraint.constant = -newConstant
             headerHeightConstraint.constant = newHeight
         }
     }
 
     func updateOverlayHeightConstraint(with size: CGSize? = nil) {
-        if let size = size {
-            let newConstant = size.width * transitioningHeaderView.multiplier
-
+        if let newConstant = calculateHeight(from: size) {
             overlayHeightConstraint.constant = newConstant
         }
     }
@@ -208,8 +207,6 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
         let alpha: CGFloat = 1 - calculateAlpha(for: threshold)
 
         transitioningHeaderView.navigationUnderlayGradientView.alpha = alpha
-
-//                overlayHeaderView.alpha = alpha
     }
 
     func updateNavigationBarTintColorAlpha(with alpha: CGFloat) {
@@ -251,6 +248,13 @@ private extension StretchyHeaderViewToNavigationBarTransitioning {
         let effectiveNavigationOffsetY = threshold + delta + contentOffset.y // The offset matching our navigation's height
 
         return .fractionComplete(from: effectiveNavigationOffsetY / threshold)
+    }
+
+    func calculateHeight(from size: CGSize?) -> CGFloat? {
+        guard let size = size else {
+            return nil
+        }
+        return size.width * transitioningHeaderView.multiplier
     }
 }
 
